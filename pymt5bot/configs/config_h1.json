@@ -1,0 +1,19 @@
+{
+  "magic_number": 23,
+  "symbol": "EURUSD",
+  "lot": 0.01,
+  "timeframe": "H1",
+  "rsi_period": 14,
+  "rsi_overbought": 70,
+  "rsi_oversold": 30,
+  "rsi_exit_long": 55,
+  "rsi_exit_short": 45,
+  "middle_long": 35,
+  "middle_short": 65,
+  "sleep_time": 3600,
+  "hours_of_operation": {
+    "start": "00:00",
+    "end": "23:00",
+    "no_trade_interval": 3600
+  }
+}
