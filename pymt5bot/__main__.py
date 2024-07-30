@@ -1,16 +1,15 @@
 import warnings
 
 import MetaTrader5 as mt5
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     import pandas as pd
 
 import json
 import os
-from datetime import datetime
 import time as t
 import sys
-import signal
 
 import logging
 from ta.momentum import RSIIndicator
@@ -80,6 +79,7 @@ def get_time():
 
 from datetime import datetime
 
+
 def is_time_to_trade(start_time, end_time):
     now = datetime.now().time()
     start_time = datetime.strptime(start_time, "%H:%M").time()
@@ -87,11 +87,10 @@ def is_time_to_trade(start_time, end_time):
     return start_time <= now <= end_time
 
 
-
 def parse_timeframe(t):
     timeframe_mapping = {
         "h1": mt5.TIMEFRAME_H1,
-        "d1" : mt5.TIMEFRAME_D1,
+        "d1": mt5.TIMEFRAME_D1,
         "m1": mt5.TIMEFRAME_M1,
         "m15": mt5.TIMEFRAME_M15,
         "m5": mt5.TIMEFRAME_M5
@@ -118,6 +117,7 @@ class TradingBot:
         logging.info("Opened Positions:")
         for position in self.opened_positions:
             logging.info(position)
+
     @staticmethod
     def calculate_RSI(prices, period=14):
         rsi_series = RSIIndicator(prices["close"], window=period, fillna=True).rsi()
@@ -153,7 +153,7 @@ class TradingBot:
         result = mt5.order_send(request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             print("2. order_send failed, retcode={}".format(result.retcode))
-            result_dict=result._asdict()
+            result_dict = result._asdict()
             for field in result_dict.keys():
                 print("{}={}".format(field, result_dict[field]))
         return result.order
@@ -198,7 +198,7 @@ class TradingBot:
         result = mt5.order_send(close_request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             logging.info("2. order_send failed, retcode={}".format(result.retcode))
-            result_dict=result._asdict()
+            result_dict = result._asdict()
             for field in result_dict.keys():
                 logging.info("{}={}".format(field, result_dict[field]))
         return result
@@ -209,53 +209,53 @@ class TradingBot:
             if is_time_to_trade(start_time, end_time):
                 df = self.get_rates_mt()
                 rsi = self.calculate_RSI(df).iloc[-1]
-                logging.info(f"RSI Actual: {rsi}. Hora: {get_time()}")
+                logging.info(f"Current RSI: {rsi}. Time: {get_time()}")
 
                 if self.current_position is None:
                     if rsi < rsi_oversold:
-                        logging.info("Condiciones de sobreventa, abriendo trade en largo (compra).")
+                        logging.info("Oversold conditions, opening long (buy) trade.")
                         position_id = self.open_trade("buy", symbol, lot)
                         self.current_position = "long"
-                        logging.info(f"Posición abierta con position_id {position_id}")
+                        logging.info(f"Position opened with position_id {position_id}")
                         self.add_position(position_id)
 
                     elif rsi > rsi_overbought:
-                        logging.info("Condiciones de sobrecompra, abriendo trade en corto (venta).")
+                        logging.info("Overbought conditions, opening short (sell) trade.")
                         position_id = self.open_trade("sell", symbol, lot)
                         self.current_position = "short"
-                        logging.info(f"Posición abierta con position_id {position_id}")
+                        logging.info(f"Position opened with position_id {position_id}")
                         self.add_position(position_id)
 
                 elif self.current_position == "long":
                     if rsi < rsi_oversold and self.crossed_middle_long:
-                        logging.info("Condiciones de sobreventa, abriendo otro trade en largo (compra).")
+                        logging.info("Oversold conditions, opening another long (buy) trade.")
                         position_id = self.open_trade("buy", symbol, lot)
-                        logging.info(f"Posición abierta con id {position_id}")
+                        logging.info(f"Position opened with id {position_id}")
                         self.add_position(position_id)
                         self.crossed_middle_long = False
                     elif middle_long < rsi < rsi_exit_long:
                         self.crossed_middle_long = True
-                        logging.info(f"RSI ha cruzado el punto intermedio desde abajo hacia arriba")
+                        logging.info(f"RSI has crossed the middle point from below to above")
                     elif rsi > rsi_exit_long:
                         for position_id in self.opened_positions[:]:
-                            logging.info(f"Salir de posicion en largo con id {position_id}")
+                            logging.info(f"Exiting long position with id {position_id}")
                             self.close_trade("sell", symbol, lot, position_id)
                             self.opened_positions.remove(position_id)
                         self.current_position = None
                         self.crossed_middle_long = False
                 elif self.current_position == "short":
                     if rsi > rsi_overbought and self.crossed_middle_short:
-                        logging.info("Condiciones de sobrecompra, abriendo otro trade en corto (venta).")
+                        logging.info("Overbought conditions, opening another short (sell) trade.")
                         position_id = self.open_trade("sell", symbol, lot)
-                        logging.info(f"Posicion abierta con id {position_id}")
+                        logging.info(f"Position opened with id {position_id}")
                         self.add_position(position_id)
                         self.crossed_middle_short = False
                     elif middle_short > rsi > rsi_exit_short:
                         self.crossed_middle_short = True
-                        logging.info(f"RSI ha cruzado el punto intermedio desde arriba hacia abajo")
+                        logging.info(f"RSI has crossed the middle point from above to below")
                     elif rsi < rsi_exit_short:
                         for position_id in self.opened_positions[:]:
-                            logging.info(f"Salir de posicion en corto con id {position_id}")
+                            logging.info(f"Exiting short position with id {position_id}")
                             self.close_trade("buy", symbol, lot, position_id)
                             self.opened_positions.remove(position_id)
                         self.current_position = None
@@ -278,6 +278,4 @@ if __name__ == '__main__':
     if not mt5.login(creds["login"], password=creds["password"], server=creds["server"]):
         logging.info("Login error, error code =", mt5.last_error())
         quit()
-    print("Se está ejecutando el bot, puedes consultar los logs en output.log")
-    print("Para terminar el programa, presione Ctrl+C")
     TradingBot().start_trading()
